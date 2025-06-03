@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Interaktif Kimia Kelas 10</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Visualization & Content Choices: 
+        - Bab 1 (Sifat Periodik): Goal: Membandingkan tren. Method: Line Chart (Chart.js) interaktif. Interaction: Tombol untuk mengganti properti yang ditampilkan. ✨ Fitur AI: Tombol "Analisis Tren Ini dengan AI" memanggil Gemini API untuk menjelaskan tren yang dipilih secara mendalam. Justification: Visualisasi dinamis lebih efektif, dan penjelasan AI menambah kedalaman pemahaman.
+        - Bab 2 (Ikatan Kimia): Goal: Mengorganisir & membandingkan. Method: Tabel HTML/Tailwind untuk perbandingan sifat senyawa; Kartu interaktif untuk konsep. Interaction: Klik pada kartu untuk menampilkan detail. Justification: Tabel efisien untuk perbandingan, kartu interaktif baik untuk definisi.
+        - Bab 3 (Bentuk Molekul): Goal: Visualisasi & klasifikasi. Method: Galeri grid (HTML/Tailwind) dengan representasi visual sederhana. Interaction: Hover/klik pada kartu untuk info lebih lanjut. Justification: Galeri visual lebih baik untuk mempelajari bentuk-bentuk geometri daripada daftar teks.
+        - Bab 4 (Larutan): Goal: Mensimulasikan eksperimen. Method: Diagram alat uji elektrolit (HTML/CSS). Interaction: Tombol (Kuat, Lemah, Non) yang mengubah tampilan lampu dan deskripsi gelembung gas. Justification: Simulasi interaktif memperkuat pemahaman konsep dari hasil eksperimen.
+        - Bab 5 (Redoks): Goal: Mengidentifikasi komponen redoks. Method: Kartu reaksi dengan tooltip interaktif. Interaction: Hover pada reaktan untuk melihat bilangan oksidasi dan perannya (oksidator/reduktor). Justification: Memberikan umpan balik langsung untuk melatih keterampilan analisis.
+        - Bab 6 (Stoikiometri): Goal: Menyediakan alat praktis. Method: Kalkulator mol interaktif (HTML/JS). Interaction: Pengguna memasukkan dua dari tiga nilai untuk menghitung nilai ketiga. ✨ Fitur AI: Tombol "Buatkan Soal Latihan Stoikiometri" memanggil Gemini API untuk membuat soal, dan tombol "Tampilkan Jawaban" untuk solusi. Justification: Alat praktis dan soal latihan AI meningkatkan keterampilan pemecahan masalah.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f7f2;
+            color: #4a4a4a;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        .nav-link.active {
+            background-color: #e9e7e0;
+            border-left-color: #c8a37e;
+            color: #3d3d3d;
+            font-weight: 600;
+        }
+        .nav-link:hover {
+            background-color: #e9e7e0;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background-color: #c8a37e;
+            color: #ffffff;
+        }
+        .btn-primary:hover {
+            background-color: #b4926f;
+        }
+        .btn-secondary {
+            background-color: #e9e7e0;
+            color: #3d3d3d;
+        }
+        .btn-secondary:hover {
+            background-color: #dcd9d1;
+        }
+        .btn-ai {
+            background-color: #a3c8c1; /* Teal-ish color for AI buttons */
+            color: #ffffff;
+        }
+        .btn-ai:hover {
+            background-color: #8ab8b0;
+        }
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3d3d3d;
+            border-bottom: 3px solid #c8a37e;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #3d3d3d;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .ai-output {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #e9f5f3;
+            border-left: 4px solid #a3c8c1;
+            border-radius: 0.25rem;
+            white-space: pre-wrap; /* To preserve formatting from Gemini */
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #a3c8c1;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="relative min-h-screen md:flex">
+        <aside id="sidebar" class="bg-white text-gray-800 w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out z-20 shadow-lg">
+            <a href="#" class="text-2xl font-extrabold text-[#3d3d3d] flex items-center justify-center space-x-2 px-4">
+                <span class="text-3xl">🧪</span>
+                <span>Kimia K-10</span>
+            </a>
+            <nav id="nav-menu">
+                <a href="#bab1" class="nav-link block py-2.5 px-4 rounded transition duration-200">Bab 1: Struktur Atom</a>
+                <a href="#bab2" class="nav-link block py-2.5 px-4 rounded transition duration-200">Bab 2: Ikatan Kimia</a>
+                <a href="#bab3" class="nav-link block py-2.5 px-4 rounded transition duration-200">Bab 3: Bentuk Molekul</a>
+                <a href="#bab4" class="nav-link block py-2.5 px-4 rounded transition duration-200">Bab 4: Larutan</a>
+                <a href="#bab5" class="nav-link block py-2.5 px-4 rounded transition duration-200">Bab 5: Redoks</a>
+                <a href="#bab6" class="nav-link block py-2.5 px-4 rounded transition duration-200">Bab 6: Stoikiometri</a>
+            </nav>
+        </aside>
+
+        <div class="flex-1 p-4 md:p-10 text-gray-700 overflow-y-auto">
+            <header class="md:hidden flex justify-between items-center mb-6">
+                 <a href="#" class="text-2xl font-extrabold text-[#3d3d3d] flex items-center space-x-2">
+                    <span class="text-3xl">🧪</span>
+                    <span>Kimia K-10</span>
+                </a>
+                <button id="mobile-menu-button" class="p-2 rounded-md focus:outline-none focus:bg-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </header>
+
+            <main>
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">Dasbor Interaktif Kimia</h1>
+                    <p class="text-md">Selamat datang di dasbor pembelajaran Kimia Kelas 10 Semester 2! Gunakan navigasi untuk menjelajahi setiap bab. Setiap bab berisi ringkasan konsep, visualisasi interaktif, dan alat bantu untuk memperdalam pemahaman Anda, kini dengan dukungan AI! ✨</p>
+                </div>
+                
+                <section id="bab1" class="pt-16 -mt-16">
+                    <h2>Bab 1: Struktur Atom & Sifat Periodik</h2>
+                    <p class="mb-6">Bab ini menguatkan kembali konsep dasar atom dan keteraturan sifat unsur dalam Sistem Periodik Unsur. Memahami tren ini adalah kunci untuk mempelajari bagaimana atom berinteraksi. Mari kita visualisasikan beberapa tren sifat periodik yang paling penting untuk unsur-unsur Periode 3 (dari Natrium hingga Argon).</p>
+                    <div class="card p-6">
+                        <h3>Tren Sifat Periodik Unsur (Periode 3)</h3>
+                        <p class="mb-4">Pilih sifat yang ingin Anda lihat pada grafik di bawah ini. Perhatikan bagaimana nilai sifat tersebut berubah dari kiri ke kanan dalam satu periode.</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button class="btn btn-secondary property-btn" data-property="radius" data-property-name="Jari-Jari Atom">Jari-Jari Atom</button>
+                            <button class="btn btn-secondary property-btn" data-property="ionization" data-property-name="Energi Ionisasi">Energi Ionisasi</button>
+                            <button class="btn btn-secondary property-btn" data-property="electronegativity" data-property-name="Keelektronegatifan">Keelektronegatifan</button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="periodicTrendChart"></canvas>
+                        </div>
+                        <div class="mt-6">
+                            <button id="analyzeTrendBtn" class="btn btn-ai flex items-center">
+                                <span id="analyzeTrendSpinner" class="loading-spinner hidden"></span>
+                                ✨ Analisis Tren Ini dengan AI
+                            </button>
+                            <div id="trendAnalysisOutput" class="ai-output hidden"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="bab2" class="pt-16 -mt-16">
+                    <h2>Bab 2: Ikatan Kimia</h2>
+                    <p class="mb-6">Ikatan kimia adalah gaya yang menyatukan atom-atom untuk membentuk senyawa. Ada beberapa jenis ikatan utama, masing-masing menghasilkan senyawa dengan sifat yang sangat berbeda. Bab ini akan membandingkan sifat-sifat kunci dari senyawa ionik, kovalen, dan logam.</p>
+                    <div class="card p-6">
+                        <h3>Perbandingan Sifat Senyawa Berdasarkan Ikatan</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-[#e9e7e0]">
+                                        <th class="p-3 font-semibold text-sm">Sifat</th>
+                                        <th class="p-3 font-semibold text-sm">Senyawa Ionik (Contoh: NaCl)</th>
+                                        <th class="p-3 font-semibold text-sm">Senyawa Kovalen (Contoh: CH₄)</th>
+                                        <th class="p-3 font-semibold text-sm">Logam (Contoh: Fe)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white">
+                                    <tr class="border-b border-gray-200">
+                                        <td class="p-3">Titik Leleh/Didih</td>
+                                        <td class="p-3">Tinggi</td>
+                                        <td class="p-3">Rendah</td>
+                                        <td class="p-3">Tinggi</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200">
+                                        <td class="p-3">Kekerasan</td>
+                                        <td class="p-3">Keras tapi rapuh</td>
+                                        <td class="p-3">Lunak</td>
+                                        <td class="p-3">Keras dan liat</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200">
+                                        <td class="p-3">Daya Hantar Listrik (Padat)</td>
+                                        <td class="p-3">Tidak Menghantarkan</td>
+                                        <td class="p-3">Tidak Menghantarkan</td>
+                                        <td class="p-3">Menghantarkan</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3">Daya Hantar Listrik (Lelehan/Larutan)</td>
+                                        <td class="p-3">Menghantarkan</td>
+                                        <td class="p-3">Tidak Menghantarkan (umumnya)</td>
+                                        <td class="p-3">Menghantarkan</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="bab3" class="pt-16 -mt-16">
+                    <h2>Bab 3: Arsitektur Molekul</h2>
+                     <p class="mb-6">Bentuk tiga dimensi sebuah molekul menentukan banyak sifatnya, termasuk polaritas dan reaktivitas. Teori VSEPR membantu kita meramalkan bentuk ini berdasarkan tolakan antar pasangan elektron di sekitar atom pusat. Di bawah ini adalah galeri beberapa bentuk molekul yang umum.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="card p-5 text-center">
+                            <h4 class="font-bold text-lg mb-2">Linear</h4>
+                            <div class="text-5xl mb-3">⚬–⚫–⚬</div>
+                            <p class="text-sm">Notasi: AX₂</p>
+                            <p class="text-sm">Sudut: 180°</p>
+                            <p class="text-sm">Contoh: CO₂</p>
+                        </div>
+                        <div class="card p-5 text-center">
+                            <h4 class="font-bold text-lg mb-2">Segitiga Planar</h4>
+                            <div class="text-5xl mb-3">⚬<br>| <br>⚫–⚬</div>
+                            <p class="text-sm">Notasi: AX₃</p>
+                            <p class="text-sm">Sudut: 120°</p>
+                            <p class="text-sm">Contoh: BF₃</p>
+                        </div>
+                        <div class="card p-5 text-center">
+                            <h4 class="font-bold text-lg mb-2">Tetrahedral</h4>
+                             <div class="text-5xl mb-3">⚬<br>|<br>⚬–⚫–⚬<br>| <br>⚬</div>
+                            <p class="text-sm">Notasi: AX₄</p>
+                            <p class="text-sm">Sudut: 109.5°</p>
+                            <p class="text-sm">Contoh: CH₄</p>
+                        </div>
+                         <div class="card p-5 text-center">
+                            <h4 class="font-bold text-lg mb-2">Piramida Trigonal</h4>
+                            <div class="text-5xl mb-3">··<br>⚫<br>/ | \ <br>⚬ ⚬ ⚬</div>
+                            <p class="text-sm">Notasi: AX₃E</p>
+                            <p class="text-sm">Sudut: ~107°</p>
+                            <p class="text-sm">Contoh: NH₃</p>
+                        </div>
+                        <div class="card p-5 text-center">
+                            <h4 class="font-bold text-lg mb-2">Bengkok (Bentuk V)</h4>
+                            <div class="text-5xl mb-3">··<br>⚫–⚬<br>··| <br> &nbsp; ⚬</div>
+                            <p class="text-sm">Notasi: AX₂E₂</p>
+                            <p class="text-sm">Sudut: ~104.5°</p>
+                            <p class="text-sm">Contoh: H₂O</p>
+                        </div>
+                         <div class="card p-5 text-center">
+                            <h4 class="font-bold text-lg mb-2">Oktahedral</h4>
+                             <div class="text-5xl mb-3">⚬<br>|<br>⚬–⚫–⚬<br>|<br>⚬</div>
+                            <p class="text-sm">Notasi: AX₆</p>
+                            <p class="text-sm">Sudut: 90°</p>
+                            <p class="text-sm">Contoh: SF₆</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="bab4" class="pt-16 -mt-16">
+                    <h2>Bab 4: Larutan Elektrolit & Non-elektrolit</h2>
+                    <p class="mb-6">Mengapa beberapa larutan dapat menghantarkan listrik sementara yang lain tidak? Jawabannya terletak pada ada atau tidaknya ion-ion yang bergerak bebas. Mari kita simulasikan uji daya hantar listrik untuk melihat perbedaannya.</p>
+                    <div class="card p-6">
+                        <h3>Simulasi Uji Daya Hantar Listrik</h3>
+                        <p class="mb-4">Klik tombol di bawah untuk melihat apa yang terjadi ketika berbagai jenis larutan diuji.</p>
+                         <div class="flex flex-wrap gap-2 mb-4">
+                            <button id="btn-kuat" class="btn btn-secondary">Elektrolit Kuat</button>
+                            <button id="btn-lemah" class="btn btn-secondary">Elektrolit Lemah</button>
+                            <button id="btn-non" class="btn btn-secondary">Non-elektrolit</button>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-6 items-center">
+                            <div class="w-full md:w-1/2">
+                                <div class="bg-gray-100 p-4 rounded-lg border-2 border-gray-300">
+                                    <div class="flex justify-center items-end h-48">
+                                        <div id="light-bulb" class="w-16 h-16 bg-gray-300 rounded-full mb-2 transition-all duration-300"></div>
+                                    </div>
+                                    <div class="bg-blue-200 h-24 rounded-b-lg flex justify-around items-end p-2">
+                                        <div class="w-4 h-16 bg-gray-600 rounded-t-md"></div>
+                                        <div id="bubbles" class="text-blue-800 text-sm"></div>
+                                        <div class="w-4 h-16 bg-gray-600 rounded-t-md"></div>
+                                    </div>
+                                    <div class="text-center font-semibold mt-2" id="solution-name">Pilih Larutan</div>
+                                </div>
+                            </div>
+                            <div class="w-full md:w-1/2">
+                                <h4 class="font-bold text-lg mb-2">Hasil Pengamatan:</h4>
+                                <p id="observation-text" class="text-base">Pilih salah satu jenis larutan untuk memulai simulasi.</p>
+                                <h4 class="font-bold text-lg mb-2 mt-4">Penjelasan:</h4>
+                                <p id="explanation-text" class="text-base">Partikel dalam larutan akan menentukan kemampuannya menghantarkan listrik.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="bab5" class="pt-16 -mt-16">
+                    <h2>Bab 5: Reaksi Redoks</h2>
+                    <p class="mb-6">Reaksi Reduksi-Oksidasi (Redoks) adalah tentang perpindahan elektron dan perubahan bilangan oksidasi (biloks). Kunci untuk memahami redoks adalah mampu mengidentifikasi zat mana yang teroksidasi (reduktor) dan mana yang tereduksi (oksidator). Analisis reaksi di bawah ini untuk berlatih.</p>
+                    <div class="card p-6">
+                        <h3>Analisis Reaksi Redoks</h3>
+                        <p>Arahkan kursor (atau sentuh pada perangkat mobile) ke setiap pereaksi untuk melihat perannya dalam reaksi redoks berikut:</p>
+                        <div class="mt-4 p-4 bg-gray-100 rounded-lg text-center text-lg md:text-xl font-mono">
+                            <span class="redox-reactant" data-info="CuO: Tembaga(II) Oksida. Cu biloks +2 -> 0 (Reduksi). CuO adalah OKSIDATOR.">CuO</span>
+                            <span>+</span>
+                            <span class="redox-reactant" data-info="H₂: Gas Hidrogen. H biloks 0 -> +1 (Oksidasi). H₂ adalah REDUKTOR.">H₂</span>
+                            <span>→</span>
+                            <span>Cu</span>
+                            <span>+</span>
+                            <span>H₂O</span>
+                        </div>
+                         <div id="redox-tooltip" class="absolute hidden bg-gray-800 text-white text-sm rounded-lg p-2 z-10"></div>
+                    </div>
+                </section>
+
+                <section id="bab6" class="pt-16 -mt-16">
+                    <h2>Bab 6: Stoikiometri</h2>
+                    <p class="mb-6">Stoikiometri adalah seni berhitung dalam kimia. Konsep utamanya adalah "mol", yang menghubungkan massa, volume, dan jumlah partikel. Gunakan kalkulator sederhana di bawah ini untuk berlatih mengonversi antara massa, mol, dan massa molekul relatif (Mr).</p>
+                    <div class="card p-6">
+                        <h3>Kalkulator Mol Sederhana</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="massa" class="block text-sm font-medium text-gray-700">Massa (gram)</label>
+                                <input type="number" id="massa" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2" placeholder="contoh: 18">
+                            </div>
+                            <div>
+                                <label for="mr" class="block text-sm font-medium text-gray-700">Massa Molekul Relatif (Mr)</label>
+                                <input type="number" id="mr" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2" placeholder="contoh: 18 untuk H₂O">
+                            </div>
+                            <div>
+                                <label for="mol" class="block text-sm font-medium text-gray-700">Jumlah Mol (mol)</label>
+                                <input type="number" id="mol" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2" placeholder="contoh: 1">
+                            </div>
+                        </div>
+                        <div class="mt-6 flex flex-wrap gap-2">
+                            <button id="calculate-btn" class="btn btn-primary">Hitung</button>
+                            <button id="clear-btn" class="btn btn-secondary">Bersihkan</button>
+                        </div>
+                        <p id="calc-result" class="mt-4 text-green-700 font-semibold"></p>
+                        
+                        <div class="mt-8 border-t pt-6">
+                            <h4 class="text-lg font-semibold mb-3">Latihan Soal Stoikiometri dengan AI</h4>
+                            <button id="generateQuestionBtn" class="btn btn-ai flex items-center">
+                                <span id="generateQuestionSpinner" class="loading-spinner hidden"></span>
+                                ✨ Buatkan Soal Latihan Stoikiometri
+                            </button>
+                            <div id="stoichiometryQuestionOutput" class="ai-output hidden mt-4"></div>
+                            <button id="getAnswerBtn" class="btn btn-secondary mt-3 hidden flex items-center">
+                                <span id="getAnswerSpinner" class="loading-spinner hidden"></span>
+                                Tampilkan Jawaban & Pembahasan
+                            </button>
+                            <div id="stoichiometryAnswerOutput" class="ai-output hidden mt-4"></div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const sidebar = document.getElementById('sidebar');
+
+    mobileMenuButton.addEventListener('click', () => {
+        sidebar.classList.toggle('-translate-x-full');
+    });
+    
+    document.querySelectorAll('#nav-menu a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (sidebar.classList.contains('-translate-x-full') === false) {
+                 sidebar.classList.add('-translate-x-full');
+            }
+        });
+    });
+
+    const sections = document.querySelectorAll('section');
+    const navLinks = document.querySelectorAll('#nav-menu a');
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                });
+            }
+        });
+    }, { rootMargin: '-30% 0px -70% 0px' });
+
+    sections.forEach(section => {
+        observer.observe(section);
+    });
+
+    const periodicData = {
+        elements: ['Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar'],
+        radius: [186, 160, 143, 117, 110, 104, 99, 94], // pm
+        ionization: [496, 738, 578, 787, 1012, 999, 1251, 1521], // kJ/mol
+        electronegativity: [0.93, 1.31, 1.61, 1.90, 2.19, 2.58, 3.16, null] // Pauling
+    };
+    let currentPeriodicProperty = 'radius';
+    let currentPeriodicPropertyName = 'Jari-Jari Atom';
+
+
+    const ctx = document.getElementById('periodicTrendChart').getContext('2d');
+    let periodicChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: periodicData.elements,
+            datasets: []
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false, // Adjusted for better visualization of some properties
+                    title: { display: true, text: 'Nilai' }
+                },
+                x: {
+                    title: { display: true, text: 'Unsur Periode 3' }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    function updateChart(property, propertyName) {
+        currentPeriodicProperty = property;
+        currentPeriodicPropertyName = propertyName;
+        const datasets = {
+            radius: { label: 'Jari-Jari Atom (pm)', data: periodicData.radius, color: '#d98a8a' },
+            ionization: { label: 'Energi Ionisasi (kJ/mol)', data: periodicData.ionization, color: '#7ba7d3' },
+            electronegativity: { label: 'Keelektronegatifan (Skala Pauling)', data: periodicData.electronegativity, color: '#8ad9a1' }
+        };
+        const selectedData = datasets[property];
+        periodicChart.data.datasets = [{
+            label: selectedData.label,
+            data: selectedData.data,
+            borderColor: selectedData.color,
+            backgroundColor: selectedData.color + '33', // Add some transparency
+            tension: 0.1,
+            fill: true
+        }];
+        periodicChart.options.scales.y.title.text = selectedData.label;
+        periodicChart.update();
+        // Reset AI analysis output when chart changes
+        document.getElementById('trendAnalysisOutput').classList.add('hidden');
+        document.getElementById('trendAnalysisOutput').textContent = '';
+    }
+
+    document.querySelectorAll('.property-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            updateChart(e.target.dataset.property, e.target.dataset.propertyName);
+        });
+    });
+
+    updateChart('radius', 'Jari-Jari Atom'); // Initial chart
+    
+    const lightBulb = document.getElementById('light-bulb');
+    const bubbles = document.getElementById('bubbles');
+    const solutionName = document.getElementById('solution-name');
+    const observationText = document.getElementById('observation-text');
+    const explanationText = document.getElementById('explanation-text');
+
+    const electrolyteData = {
+        kuat: {
+            name: 'Elektrolit Kuat (contoh: NaCl)',
+            light: 'bg-yellow-300 shadow-[0_0_20px_5px_rgba(253,249,156,0.8)]',
+            bubbles: 'Banyak gelembung',
+            observation: 'Lampu menyala terang dan terbentuk banyak gelembung gas.',
+            explanation: 'Zat terlarut terionisasi sempurna menjadi ion-ion yang bergerak bebas, sehingga mampu menghantarkan listrik dengan sangat baik.'
+        },
+        lemah: {
+            name: 'Elektrolit Lemah (contoh: CH₃COOH)',
+            light: 'bg-yellow-200 shadow-[0_0_10px_2px_rgba(253,249,156,0.5)]',
+            bubbles: 'Sedikit gelembung',
+            observation: 'Lampu menyala redup (atau tidak menyala) dan terbentuk sedikit gelembung gas.',
+            explanation: 'Zat terlarut hanya terionisasi sebagian kecil. Jumlah ion dalam larutan sedikit, sehingga daya hantar listriknya lemah.'
+        },
+        non: {
+            name: 'Non-elektrolit (contoh: Gula)',
+            light: 'bg-gray-300',
+            bubbles: 'Tidak ada gelembung',
+            observation: 'Lampu tidak menyala dan tidak ada gelembung gas.',
+            explanation: 'Zat terlarut tidak terionisasi sama sekali dan tetap dalam bentuk molekul netral. Tidak ada ion, sehingga tidak dapat menghantarkan listrik.'
+        }
+    };
+
+    function updateElectrolyteTest(type) {
+        const data = electrolyteData[type];
+        lightBulb.className = `w-16 h-16 rounded-full mb-2 transition-all duration-300 ${data.light}`;
+        bubbles.textContent = data.bubbles;
+        solutionName.textContent = data.name;
+        observationText.textContent = data.observation;
+        explanationText.textContent = data.explanation;
+    }
+
+    document.getElementById('btn-kuat').addEventListener('click', () => updateElectrolyteTest('kuat'));
+    document.getElementById('btn-lemah').addEventListener('click', () => updateElectrolyteTest('lemah'));
+    document.getElementById('btn-non').addEventListener('click', () => updateElectrolyteTest('non'));
+
+    const redoxReactants = document.querySelectorAll('.redox-reactant');
+    const tooltip = document.getElementById('redox-tooltip');
+
+    redoxReactants.forEach(reactant => {
+        reactant.addEventListener('mouseenter', e => {
+            tooltip.textContent = e.target.dataset.info;
+            tooltip.classList.remove('hidden');
+            const rect = e.target.getBoundingClientRect();
+            tooltip.style.left = `${rect.left + window.scrollX}px`;
+            tooltip.style.top = `${rect.top + window.scrollY - tooltip.offsetHeight - 5}px`;
+        });
+        reactant.addEventListener('mouseleave', () => {
+            tooltip.classList.add('hidden');
+        });
+    });
+
+    const massaInput = document.getElementById('massa');
+    const mrInput = document.getElementById('mr');
+    const molInput = document.getElementById('mol');
+    const calculateBtn = document.getElementById('calculate-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const resultP = document.getElementById('calc-result');
+
+    calculateBtn.addEventListener('click', () => {
+        const massa = parseFloat(massaInput.value);
+        const mr = parseFloat(mrInput.value);
+        const mol = parseFloat(molInput.value);
+
+        resultP.textContent = '';
+
+        if (!isNaN(massa) && !isNaN(mr) && molInput.value === '') {
+            molInput.value = (massa / mr).toFixed(4);
+        } else if (!isNaN(mol) && !isNaN(mr) && massaInput.value === '') {
+            massaInput.value = (mol * mr).toFixed(4);
+        } else if (!isNaN(massa) && !isNaN(mol) && mrInput.value === '') {
+            mrInput.value = (massa / mol).toFixed(4);
+        } else if ((!isNaN(massa) && massaInput.value !== '') + (!isNaN(mr) && mrInput.value !== '') + (!isNaN(mol) && molInput.value !== '') >= 2) {
+             // If two or more fields are filled, prioritize calculation based on common scenarios
+            if (!isNaN(massa) && !isNaN(mr)) {
+                 molInput.value = (massa / mr).toFixed(4);
+            } else if (!isNaN(mol) && !isNaN(mr)) {
+                 massaInput.value = (mol * mr).toFixed(4);
+            } // Add more specific conditions if needed
+        } else {
+            resultP.textContent = 'Harap isi dua dari tiga kolom untuk menghitung.';
+            resultP.classList.remove('text-green-700');
+            resultP.classList.add('text-red-600');
+            return;
+        }
+        resultP.textContent = 'Perhitungan berhasil!';
+        resultP.classList.remove('text-red-600');
+        resultP.classList.add('text-green-700');
+    });
+
+    clearBtn.addEventListener('click', () => {
+        massaInput.value = '';
+        mrInput.value = '';
+        molInput.value = '';
+        resultP.textContent = '';
+    });
+
+    // Gemini API Integration
+    const apiKey = ""; // Left empty as per instructions
+    const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    const analyzeTrendBtn = document.getElementById('analyzeTrendBtn');
+    const trendAnalysisOutput = document.getElementById('trendAnalysisOutput');
+    const analyzeTrendSpinner = document.getElementById('analyzeTrendSpinner');
+
+    analyzeTrendBtn.addEventListener('click', async () => {
+        analyzeTrendSpinner.classList.remove('hidden');
+        trendAnalysisOutput.classList.add('hidden');
+        trendAnalysisOutput.textContent = 'Menganalisis tren...';
+
+        const dataPoints = periodicData.elements.map((el, i) => `${el}: ${periodicData[currentPeriodicProperty][i]}`).join(', ');
+        const prompt = `Jelaskan secara detail mengapa tren sifat periodik "${currentPeriodicPropertyName}" untuk unsur-unsur Periode 3 (Natrium hingga Argon) menunjukkan pola sebagai berikut: ${dataPoints}. Fokus pada faktor-faktor atomik seperti muatan inti efektif, jumlah kulit elektron, dan tarikan elektron yang menyebabkan tren tersebut. Berikan penjelasan yang mudah dipahami untuk siswa SMA.`;
+
+        try {
+            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+            const response = await fetch(geminiApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                const text = result.candidates[0].content.parts[0].text;
+                trendAnalysisOutput.textContent = text;
+            } else {
+                trendAnalysisOutput.textContent = 'Gagal mendapatkan analisis tren. Respons tidak sesuai format.';
+                console.error('Unexpected Gemini API response structure:', result);
+            }
+        } catch (error) {
+            trendAnalysisOutput.textContent = 'Terjadi kesalahan saat menghubungi AI. Silakan coba lagi.';
+            console.error('Error calling Gemini API:', error);
+        } finally {
+            analyzeTrendSpinner.classList.add('hidden');
+            trendAnalysisOutput.classList.remove('hidden');
+        }
+    });
+
+    const generateQuestionBtn = document.getElementById('generateQuestionBtn');
+    const stoichiometryQuestionOutput = document.getElementById('stoichiometryQuestionOutput');
+    const getAnswerBtn = document.getElementById('getAnswerBtn');
+    const stoichiometryAnswerOutput = document.getElementById('stoichiometryAnswerOutput');
+    const generateQuestionSpinner = document.getElementById('generateQuestionSpinner');
+    const getAnswerSpinner = document.getElementById('getAnswerSpinner');
+    let currentStoichiometryQuestion = "";
+
+    generateQuestionBtn.addEventListener('click', async () => {
+        generateQuestionSpinner.classList.remove('hidden');
+        stoichiometryQuestionOutput.classList.add('hidden');
+        stoichiometryAnswerOutput.classList.add('hidden');
+        getAnswerBtn.classList.add('hidden');
+        stoichiometryQuestionOutput.textContent = 'Membuat soal...';
+
+        const prompt = "Buatkan satu soal latihan stoikiometri tingkat SMA kelas 10 yang melibatkan konsep mol, massa, dan Massa Molekul Relatif (Mr). Sertakan data Mr yang relevan jika diperlukan dalam soal (misalnya Ar H=1, O=16, C=12, Na=23, Cl=35.5, dll). Jangan berikan jawaban atau pembahasannya dulu, hanya soalnya saja.";
+        
+        try {
+            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+            const response = await fetch(geminiApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                currentStoichiometryQuestion = result.candidates[0].content.parts[0].text;
+                stoichiometryQuestionOutput.textContent = currentStoichiometryQuestion;
+                getAnswerBtn.classList.remove('hidden');
+            } else {
+                stoichiometryQuestionOutput.textContent = 'Gagal membuat soal. Respons tidak sesuai format.';
+                console.error('Unexpected Gemini API response structure:', result);
+            }
+        } catch (error) {
+            stoichiometryQuestionOutput.textContent = 'Terjadi kesalahan saat menghubungi AI. Silakan coba lagi.';
+            console.error('Error calling Gemini API:', error);
+        } finally {
+            generateQuestionSpinner.classList.add('hidden');
+            stoichiometryQuestionOutput.classList.remove('hidden');
+        }
+    });
+
+    getAnswerBtn.addEventListener('click', async () => {
+        if (!currentStoichiometryQuestion) return;
+        getAnswerSpinner.classList.remove('hidden');
+        stoichiometryAnswerOutput.classList.add('hidden');
+        stoichiometryAnswerOutput.textContent = 'Memuat jawaban...';
+
+        const prompt = `Berikan jawaban dan langkah-langkah pembahasan yang jelas dan rinci untuk soal stoikiometri berikut: "${currentStoichiometryQuestion}". Pastikan pembahasannya mudah diikuti oleh siswa SMA.`;
+
+        try {
+            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+            const response = await fetch(geminiApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                const text = result.candidates[0].content.parts[0].text;
+                stoichiometryAnswerOutput.textContent = text;
+            } else {
+                stoichiometryAnswerOutput.textContent = 'Gagal mendapatkan jawaban. Respons tidak sesuai format.';
+                console.error('Unexpected Gemini API response structure:', result);
+            }
+        } catch (error) {
+            stoichiometryAnswerOutput.textContent = 'Terjadi kesalahan saat menghubungi AI. Silakan coba lagi.';
+            console.error('Error calling Gemini API:', error);
+        } finally {
+            getAnswerSpinner.classList.add('hidden');
+            stoichiometryAnswerOutput.classList.remove('hidden');
+        }
+    });
+
+});
+</script>
+</body>
+</html>
